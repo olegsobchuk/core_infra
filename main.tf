@@ -1,260 +1,239 @@
-data "aws_ami" "web" {
-  most_recent = true
+module "s3_storage" {
+  source = "./modules/storage"
 
-  filter {
-    name   = "state"
-    values = ["available"]
-  }
-
-  filter {
-    name   = "name"
-    values = ["ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"]
-  }
-
-  filter {
-    name   = "virtualization-type"
-    values = ["hvm"]
-  }
-
-  owners = ["099720109477"]
+  region = var.region
 }
+# data "aws_ami" "web" {
+#   most_recent = true
 
-resource "aws_vpc" "main" {
-  cidr_block = "172.16.0.0/16"
-  # enable_dns_support = true # default `true`
-  enable_dns_hostnames = true # default `false`
+#   filter {
+#     name   = "state"
+#     values = ["available"]
+#   }
 
-  tags = {
-    Name = "main"
-  }
-}
+#   filter {
+#     name   = "name"
+#     values = ["ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"]
+#   }
 
-# # PRIVATE INSTANCE
-# resource "aws_instance" "private" {
-#   count         = 1
-#   ami           = data.aws_ami.web.id
-#   instance_type = var.min_instance_type
+#   filter {
+#     name   = "virtualization-type"
+#     values = ["hvm"]
+#   }
 
-#   associate_public_ip_address = false
+#   owners = ["099720109477"]
+# }
 
-#   tags= {
-#     Name       = "Private"
+# resource "aws_vpc" "main" {
+#   cidr_block = "172.16.0.0/16"
+#   # enable_dns_support = true # default `true`
+#   enable_dns_hostnames = true # default `false`
+
+#   tags = {
+#     Name = "main"
 #   }
 # }
 
-resource "aws_subnet" "main" {
-  vpc_id = aws_vpc.main.id
-  cidr_block = "172.16.10.0/24"
-  availability_zone = "us-west-2a"
-  map_public_ip_on_launch = true
+# # # PRIVATE INSTANCE
+# # resource "aws_instance" "private" {
+# #   count         = 1
+# #   ami           = data.aws_ami.web.id
+# #   instance_type = var.min_instance_type
 
-  tags = {
-    Name = "CustomMain"
-  }
-}
+# #   associate_public_ip_address = false
 
-resource "aws_network_interface" "main" {
-  subnet_id   = aws_subnet.main.id
-  private_ips = ["172.16.10.100"]
+# #   tags= {
+# #     Name       = "Private"
+# #   }
+# # }
 
-  tags = {
-    Name = "CustomMain"
-  }
-}
+# resource "aws_subnet" "main" {
+#   vpc_id = aws_vpc.main.id
+#   cidr_block = "172.16.10.0/24"
+#   availability_zone = "us-west-2a"
+#   map_public_ip_on_launch = true
 
-resource "aws_subnet" "main2" {
-  vpc_id = aws_vpc.main.id
-  cidr_block = "172.16.11.0/24"
-  availability_zone = "us-west-2a"
-  map_public_ip_on_launch = true
+#   tags = {
+#     Name = "CustomMain"
+#   }
+# }
 
-  tags = {
-    Name = "CustomMain2"
-  }
-}
+# resource "aws_network_interface" "main" {
+#   subnet_id   = aws_subnet.main.id
+#   private_ips = ["172.16.10.100"]
 
-resource "aws_network_interface" "main2" {
-  subnet_id   = aws_subnet.main2.id
-  private_ips = ["172.16.11.100"]
+#   tags = {
+#     Name = "CustomMain"
+#   }
+# }
 
-  tags = {
-    Name = "CustomMain2"
-  }
-}
+# resource "aws_subnet" "main2" {
+#   vpc_id = aws_vpc.main.id
+#   cidr_block = "172.16.11.0/24"
+#   availability_zone = "us-west-2a"
+#   map_public_ip_on_launch = true
 
-resource "aws_route_table_association" "main" {
-  subnet_id      = aws_subnet.main2.id
-  route_table_id = aws_route_table.main.id
-}
+#   tags = {
+#     Name = "CustomMain2"
+#   }
+# }
 
-resource "aws_internet_gateway" "main" {
-  vpc_id = aws_vpc.main.id
+# resource "aws_network_interface" "main2" {
+#   subnet_id   = aws_subnet.main2.id
+#   private_ips = ["172.16.11.100"]
 
-  tags = {
-    Name = "main"
-  }
-}
+#   tags = {
+#     Name = "CustomMain2"
+#   }
+# }
 
-resource "aws_route_table" "main" {
-  vpc_id = aws_vpc.main.id
+# resource "aws_route_table_association" "main" {
+#   subnet_id      = aws_subnet.main2.id
+#   route_table_id = aws_route_table.main.id
+# }
 
-  route {
-    cidr_block = "10.0.1.0/24"
-    gateway_id = aws_internet_gateway.main.id
-  }
+# resource "aws_internet_gateway" "main" {
+#   vpc_id = aws_vpc.main.id
 
-  tags = {
-    Name = "RouteMain"
-  }
-}
+#   tags = {
+#     Name = "main"
+#   }
+# }
 
-resource "aws_eip" "main" {
-  # instance = aws_instance.main.id
-  network_interface = aws_network_interface.main2.id
-  vpc      = true
-}
+# resource "aws_route_table" "main" {
+#   vpc_id = aws_vpc.main.id
 
-resource "aws_instance" "main" {
-  ami           = data.aws_ami.web.id
-  instance_type = var.min_instance_type
-  # associate_public_ip_address = false
+#   route {
+#     cidr_block = "10.0.1.0/24"
+#     gateway_id = aws_internet_gateway.main.id
+#   }
 
-  network_interface {
-    network_interface_id = aws_network_interface.main.id
-    device_index         = 1
-  }
+#   tags = {
+#     Name = "RouteMain"
+#   }
+# }
 
-  network_interface {
-    network_interface_id = aws_network_interface.main2.id
-    device_index         = 0
-  }
+# resource "aws_eip" "main" {
+#   # instance = aws_instance.main.id
+#   network_interface = aws_network_interface.main2.id
+#   vpc      = true
+# }
 
-  tags = {
-    Name = "CustomMain"
-  }
-}
+# resource "aws_instance" "main" {
+#   ami           = data.aws_ami.web.id
+#   instance_type = var.min_instance_type
+#   # associate_public_ip_address = false
 
-# PUBLIC INSTANCE
-resource "aws_instance" "web" {
-  count         = 1
-  ami           = data.aws_ami.web.id
-  instance_type = var.min_instance_type
-  key_name  = aws_key_pair.deploy.key_name
-  user_data = file("user_data.sh")
+#   network_interface {
+#     network_interface_id = aws_network_interface.main.id
+#     device_index         = 1
+#   }
 
-  depends_on = [
-    aws_security_group.allow_http_s,
-    aws_security_group.allow_tcp,
-  ]
+#   network_interface {
+#     network_interface_id = aws_network_interface.main2.id
+#     device_index         = 0
+#   }
 
-  lifecycle {
-    create_before_destroy = true
-  }
+#   tags = {
+#     Name = "CustomMain"
+#   }
+# }
 
-  vpc_security_group_ids = [
-    aws_security_group.allow_web.id,
-    aws_security_group.allow_tcp.id,
-  ]
+# # PUBLIC INSTANCE
+# resource "aws_instance" "web" {
+#   count         = 1
+#   ami           = data.aws_ami.web.id
+#   instance_type = var.min_instance_type
+#   key_name  = aws_key_pair.deploy.key_name
+#   user_data = file("user_data.sh")
 
-  connection {
-    type        = "ssh"
-    host        = self.public_ip
-    user        = "ubuntu"
-    private_key = tls_private_key.deploy_key.private_key_pem  # ".ssh/id_rsa" # file(local_file.private_key)
-    timeout     = "1m"
-  }
+#   depends_on = [
+#     aws_security_group.allow_web,
+#     aws_security_group.allow_tcp,
+#   ]
 
-  provisioner "remote-exec" {
-    inline = [
-      "sudo apt-get update",
-      "sudo apt-get install mc nginx libpq-dev -y",
-    ]
-  }
+#   lifecycle {
+#     create_before_destroy = true
+#   }
 
-  provisioner "file" {
-    source      = "user_data.sh"
-    destination = "user_data.sh"
-  }
+#   vpc_security_group_ids = [
+#     aws_security_group.allow_web.id,
+#     aws_security_group.allow_tcp.id,
+#   ]
 
-  tags = {
-    Name        = "TestAppService"
-    Owner       = "OlehSobchuk"
-    Environment = "dev"
-  }
-}
+#   connection {
+#     type        = "ssh"
+#     host        = self.public_ip
+#     user        = "ubuntu"
+#     private_key = tls_private_key.deploy_key.private_key_pem  # ".ssh/id_rsa" # file(local_file.private_key)
+#     timeout     = "1m"
+#   }
 
-resource "aws_security_group" "allow_web" {
-  name        = "allow_HTTP_S"
-  description = "Allow HTTP(S) inbound traffic"
-  # vpc_id      = aws_vpc.main.id
+#   # provisioner "remote-exec" {
+#   #   inline = [
+#   #     "sudo apt-get update",
+#   #     "sudo apt-get install mc nginx libpq-dev -y",
+#   #   ]
+#   # }
 
-  ingress {
-    description = "HTTP from VPC"
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+#   # provisioner "file" {
+#   #   source      = "user_data.sh"
+#   #   destination = "user_data.sh"
+#   # }
 
-  ingress {
-    description = "TLS from VPC"
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+#   tags = {
+#     Name        = "TestAppService"
+#     Owner       = "OlehSobchuk"
+#     Environment = "dev"
+#   }
+# }
 
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
+# resource "aws_security_group" "allow_web" {
+#   name        = "allow_web"
+#   description = "Allow HTTP(S) inbound traffic"
+#   # vpc_id      = aws_vpc.main.id
 
-resource "aws_security_group" "allow_tcp" {
-  name        = "allow_tcp"
-  description = "Allow TCP inbound traffic"
-  # vpc_id      = aws_vpc.main.id
+#   ingress {
+#     description = "HTTP from VPC"
+#     from_port   = 80
+#     to_port     = 80
+#     protocol    = "tcp"
+#     cidr_blocks = ["0.0.0.0/0"]
+#   }
 
-  ingress {
-    protocol        = "tcp"
-    from_port       = 22
-    to_port         = 22
-    prefix_list_ids = []
-    cidr_blocks     = ["0.0.0.0/0"]
-  }
+#   ingress {
+#     description = "TLS from VPC"
+#     from_port   = 443
+#     to_port     = 443
+#     protocol    = "tcp"
+#     cidr_blocks = ["0.0.0.0/0"]
+#   }
 
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"] /* Allow from ANY IP */
-  }
-}
+#   egress {
+#     from_port   = 0
+#     to_port     = 0
+#     protocol    = "-1"
+#     cidr_blocks = ["0.0.0.0/0"]
+#   }
+# }
 
-resource "random_uuid" "uuid" {}
+# resource "aws_security_group" "allow_tcp" {
+#   name        = "allow_tcp"
+#   description = "Allow TCP inbound traffic"
+#   # vpc_id      = aws_vpc.main.id
 
-resource "aws_s3_bucket" "deploy_bucket" {
-  bucket = "deploy-bucket-${random_uuid.uuid.result}"
-  acl    = "public-read" # "private"
+#   ingress {
+#     protocol        = "tcp"
+#     from_port       = 22
+#     to_port         = 22
+#     prefix_list_ids = []
+#     cidr_blocks     = ["0.0.0.0/0"]
+#   }
 
-  server_side_encryption_configuration {
-    rule {
-      apply_server_side_encryption_by_default {
-        kms_master_key_id = aws_kms_key.kms_secret.arn
-        sse_algorithm     = "aws:kms"
-      }
-    }
-  }
-
-  tags = {
-    Name        = "Deploy bucket"
-    Environment = "dev"
-  }
-}
-
-resource "aws_kms_key" "kms_secret" {
-  description             = "KMS key"
-  deletion_window_in_days = 7
-}
+#   egress {
+#     from_port   = 0
+#     to_port     = 0
+#     protocol    = "-1"
+#     cidr_blocks = ["0.0.0.0/0"] /* Allow from ANY IP */
+#   }
+# }
